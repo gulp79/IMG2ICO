@@ -4,7 +4,7 @@ import { FileUpload } from "@/components/FileUpload";
 import { SizeSelector } from "@/components/SizeSelector";
 import { ImagePreview } from "@/components/ImagePreview";
 import { ConvertedIcon } from "@/components/ConvertedIcon";
-import { convertToIco, getImageDimensions, SizeSelection } from "@/utils/icoConverter";
+import { convertToIco, getImageInfo, SizeSelection } from "@/utils/icoConverter";
 import { toast } from "sonner";
 
 interface ConvertedFile {
@@ -16,6 +16,7 @@ interface ConvertedFile {
 const Index = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [isVector, setIsVector] = useState(false);
   const [sizeSelection, setSizeSelection] = useState<SizeSelection>("auto");
   const [isConverting, setIsConverting] = useState(false);
   const [convertedFiles, setConvertedFiles] = useState<ConvertedFile[]>([]);
@@ -23,13 +24,15 @@ const Index = () => {
   const handleFileSelect = useCallback(async (file: File) => {
     try {
       setSelectedFile(file);
-      const dims = await getImageDimensions(file);
-      setDimensions(dims);
+      const info = await getImageInfo(file);
+      setDimensions({ width: info.width, height: info.height });
+      setIsVector(info.isVector);
       setSizeSelection("auto");
     } catch (error) {
-      toast.error("Unable to load the image");
+      toast.error(error instanceof Error ? error.message : "Unable to load the image");
       setSelectedFile(null);
       setDimensions(null);
+      setIsVector(false);
     }
   }, []);
 
@@ -40,9 +43,10 @@ const Index = () => {
       const result = await convertToIco(selectedFile, sizeSelection);
       setConvertedFiles((prev) => [result, ...prev]);
       toast.success("Icon successfully converted!");
-      // Reset for next file
+      // Reset for the next file
       setSelectedFile(null);
       setDimensions(null);
+      setIsVector(false);
       setSizeSelection("auto");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Error during conversion");
@@ -71,13 +75,13 @@ const Index = () => {
           </div>
 
           <h1 className="text-4xl md:text-6xl font-bold mb-4">
-            <span className="text-gradient">PNG</span>
+            <span className="text-gradient">IMAGE</span>
             <span className="text-foreground"> → </span>
             <span className="text-gradient">ICO</span>
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Convert your PNG images into multi‑size ICO icons for favicons, desktop, and applications.
+            Convert PNG, JPEG, WebP, AVIF, JPEG XL, GIF, BMP, or SVG images into multi-size ICO icons for favicons, desktop, and applications.
           </p>
 
           {/* Features */}
@@ -95,9 +99,9 @@ const Index = () => {
               <span>No server upload</span>
             </div>
 
-            {/* New: GitHub link */}
+            {/* GitHub link */}
             <a
-              href="https://github.com/gulp79/PNG2ICO_Web"
+              href="https://github.com/gulp79/IMG2ICO"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 hover:text-foreground transition-colors"
@@ -125,8 +129,12 @@ const Index = () => {
             {/* Right: Settings */}
             <div className="flex flex-col gap-4">
               <SizeSelector
-                dimensions={dimensions!}
-                value={sizeSelection}
+                maxDimension={
+                  isVector || !dimensions
+                    ? undefined
+                    : Math.min(dimensions.width, dimensions.height)
+                }
+                selection={sizeSelection}
                 onChange={setSizeSelection}
               />
 
@@ -135,6 +143,7 @@ const Index = () => {
                   onClick={() => {
                     setSelectedFile(null);
                     setDimensions(null);
+                    setIsVector(false);
                   }}
                   disabled={isConverting}
                   className="flex-1 py-3 px-4 rounded-xl border border-border bg-surface text-muted-foreground font-medium hover:bg-surface-elevated hover:text-foreground transition-all duration-200 disabled:opacity-50"
@@ -181,7 +190,12 @@ const Index = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {convertedFiles.map((file, index) => (
-                <ConvertedIcon key={index} file={file} />
+                <ConvertedIcon
+                  key={`${file.filename}-${index}`}
+                  blob={file.blob}
+                  filename={file.filename}
+                  sizes={file.sizes}
+                />
               ))}
             </div>
           </section>
@@ -191,6 +205,26 @@ const Index = () => {
         <footer className="mt-16 text-center text-sm text-muted-foreground space-y-1">
           <p>All conversions take place directly in your browser.</p>
           <p>Your files are never uploaded to any server.</p>
+          <p className="pt-2">
+            Made by{" "}
+            <a
+              href="https://github.com/gulp79"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground hover:text-primary transition-colors"
+            >
+              gulp79
+            </a>
+            {" · "}
+            <a
+              href="https://ko-fi.com/gulp79"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:opacity-80 transition-colors"
+            >
+              ☕ Support on Ko-fi
+            </a>
+          </p>
         </footer>
       </div>
     </div>

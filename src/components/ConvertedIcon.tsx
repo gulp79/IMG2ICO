@@ -24,17 +24,17 @@ export function ConvertedIcon({ blob, filename, sizes }: ConvertedIconProps) {
         <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
           <FileImage className="w-8 h-8 text-primary" />
         </div>
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center">
               <Check className="w-3 h-3 text-success-foreground" />
             </div>
-            <span className="text-sm font-medium text-success-foreground">Convertito con successo!</span>
+            <span className="text-sm font-medium text-success-foreground">Converted successfully</span>
           </div>
-          
+
           <h4 className="text-foreground font-medium truncate mb-2">{filename}</h4>
-          
+
           <div className="flex flex-wrap gap-1.5 mb-3">
             {sizes.map((size) => (
               <span
@@ -45,17 +45,17 @@ export function ConvertedIcon({ blob, filename, sizes }: ConvertedIconProps) {
               </span>
             ))}
           </div>
-          
+
           <p className="text-xs text-muted-foreground mb-4">
-            {(blob.size / 1024).toFixed(1)} KB • {sizes.length} dimensioni incluse
+            {(blob.size / 1024).toFixed(1)} KB • {sizes.length} size{sizes.length !== 1 ? 's' : ''} included
           </p>
-          
+
           <button
             onClick={handleDownload}
             className="w-full btn-primary-glow py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold"
           >
             <Download className="w-4 h-4" />
-            Scarica ICO
+            Download ICO
           </button>
         </div>
       </div>

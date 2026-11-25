@@ -1,73 +1,143 @@
-# Welcome to your Lovable project
+# Image to ICO Converter (PNG2ICO Web)
 
-## Project info
+A static, client-side image-to-ICO converter. Drop an image, choose the icon sizes, and download a multi-size `.ico` file. Decoding, resizing, and ICO encoding run entirely in the browser: files are never uploaded.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Live:** <https://png2ico.pulcitopi.qzz.io>
+**Repository:** <https://github.com/gulp79/IMG2ICO>
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- Converts **PNG, JPEG, WebP, AVIF, JPEG XL, GIF, BMP, and SVG** to ICO.
+- Multi-size output: **16, 32, 48, 64, 128, 256 px**.
+- Automatic size selection (all sizes up to the source resolution) or manual selection.
+- SVG is rasterized directly at every icon size, so vector icons stay sharp.
+- Non-square images are scaled proportionally and centered on a transparent canvas.
+- 100% client-side: no backend, no uploads, no analytics, no remote assets.
+- Responsive dark UI built with Tailwind CSS and shadcn/ui.
 
-**Use Lovable**
+## Supported input formats
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+| Format | Extensions | Notes |
+| --- | --- | --- |
+| PNG | `.png` | Transparency preserved. |
+| JPEG | `.jpg`, `.jpeg`, `.jpe`, `.jfif` | No alpha channel. |
+| WebP | `.webp` | Transparency preserved; animated files use the first frame. |
+| AVIF | `.avif` | Transparency preserved; animated files use the first frame. |
+| JPEG XL | `.jxl` | Decoded natively by Chrome 155+, Firefox 158+, and Safari 17+. Edge and older browsers are not supported and receive a clear error. |
+| GIF | `.gif` | First frame only. |
+| BMP | `.bmp`, `.dib` | No alpha channel. |
+| SVG | `.svg` | Rasterized per size; scripts are not executed when loaded as an image. |
 
-Changes made via Lovable will be committed automatically to this repo.
+TIFF, HEIC/HEIF, and camera RAW formats are **not** supported because browsers cannot decode them reliably.
 
-**Use your preferred IDE**
+## How it works
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. `src/components/FileUpload.tsx` validates the selected or dropped file against `src/utils/imageFormats.ts`.
+2. `src/utils/icoConverter.ts` loads the image through an `HTMLImageElement` (SVGs are normalized first so their intrinsic size is well-defined).
+3. The image is drawn into square canvases at the selected sizes, preserving the aspect ratio and centering it on transparency.
+4. Each canvas is encoded as PNG and packed into a single ICO container.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+The ICO layout follows the standard: a 6-byte header, one 16-byte directory entry per image, and a PNG payload per size. In directory entries, a width or height of `0` means 256 px. Entries are written largest first.
 
-Follow these steps:
+## Tech stack
+
+- Vite 5 + React 18 + TypeScript
+- Tailwind CSS 3 + shadcn/ui (Radix primitives)
+- React Router
+- Vitest + Testing Library (jsdom)
+
+## Getting started
+
+Requirements: Node.js 20+ and npm.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm ci
+npm run dev      # http://localhost:5173
 ```
 
-**Edit a file directly in GitHub**
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start the Vite development server. |
+| `npm run build` | Production build into `dist/` (Vite only, no type checking). |
+| `npm run preview` | Preview the production build locally. |
+| `npm run lint` | Run ESLint. |
+| `npm run typecheck` | Run `tsc --noEmit` against the app config. |
+| `npm test` | Run the test suite once. |
+| `npm run test:watch` | Run tests in watch mode. |
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+If Node.js is not available on the host, build through Docker:
 
-**Use GitHub Codespaces**
+```sh
+docker run --rm -v "$PWD":/app -w /app node:20-alpine sh -c "npm ci && npm run typecheck && npm run build"
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Deployment
 
-## What technologies are used for this project?
+The site is served by nginx as static files from `/usr/share/nginx/html/png2ico` for `png2ico.pulcitopi.qzz.io`. The server block uses `try_files $uri $uri/ /index.html` for SPA routing.
 
-This project is built with:
+```sh
+npm ci
+npm run typecheck
+npm run build
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+# Back up the current release, then copy the build contents.
+cp -a /usr/share/nginx/html/png2ico "/usr/share/nginx/html/png2ico.backup-$(date +%Y%m%d-%H%M%S)"
+install -d /usr/share/nginx/html/png2ico
+cp -a dist/. /usr/share/nginx/html/png2ico/
+chown -R nginx:nginx /usr/share/nginx/html/png2ico
+```
 
-## How can I deploy this project?
+`base` in `vite.config.ts` is `/` because the site is served from the root of its subdomain. Change it only if the deploy path changes.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Project structure
 
-## Can I connect a custom domain to my Lovable project?
+```
+src/
+  pages/Index.tsx             # Main flow: upload -> preview -> sizes -> convert -> download
+  pages/NotFound.tsx
+  App.tsx                     # Router and providers
+  components/
+    FileUpload.tsx            # Drag & drop and file picker with format validation
+    ImagePreview.tsx          # Preview with transparency checkerboard
+    SizeSelector.tsx          # Auto or manual size selection (16-256)
+    ConvertedIcon.tsx         # Result card and blob download
+    ui/                       # shadcn/ui components
+  utils/
+    imageFormats.ts           # Supported formats, MIME/extension detection
+    icoConverter.ts           # Image loading, canvas rendering, ICO encoding
+  test/                       # Vitest setup and tests
+public/                       # Static assets (robots.txt, placeholder.svg)
+.github/workflows/build.yml   # Release workflow: builds and attaches the dist zip
+.github/dependabot.yml        # Automated dependency updates
+```
 
-Yes, you can!
+## Testing
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```sh
+npm test
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+jsdom does not implement the canvas 2D API, so tests cover pure logic (format detection, size selection). Testing the full encoder requires mocking `HTMLCanvasElement.getContext` and `toDataURL`, or running the suite in a real browser.
+
+## Privacy
+
+Conversion happens locally in the browser. No image data is sent to a server, and the app loads no third-party scripts, fonts, or trackers.
+
+## Limitations
+
+- Animated GIF, WebP, and AVIF inputs use the first frame; animated ICO output is not produced.
+- Maximum ICO entry size is 256 px.
+- Very large source images are limited only by browser memory.
+- JPEG XL support depends on the browser (see the table above).
+
+## Releasing
+
+Publishing a GitHub release triggers `.github/workflows/build.yml`, which runs the type check, the tests, and the production build, then attaches `png2ico-web-<tag>.zip` (the contents of `dist/`) to that release. Nothing is published on regular pushes.
+
+## Author
+
+Created and maintained by [gulp79](https://github.com/gulp79).
+
+> ☕ **Enjoying my work?**
+>
+> &nbsp; <a href="https://ko-fi.com/gulp79"><img src="src/kofi-support.webp" alt="Support me on Ko-fi" height="128" style="vertical-align: middle;" /></a>

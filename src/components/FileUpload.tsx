@@ -1,5 +1,11 @@
 import { useCallback, useState } from 'react';
 import { Upload, Image as ImageIcon } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  ACCEPT_ATTRIBUTE,
+  getSupportedFormatSummary,
+  isSupportedImageFile,
+} from '@/utils/imageFormats';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -8,6 +14,17 @@ interface FileUploadProps {
 
 export function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
+
+  const selectFile = useCallback((file: File | undefined) => {
+    if (!file) return;
+
+    if (!isSupportedImageFile(file)) {
+      toast.error(`Unsupported format. Use ${getSupportedFormatSummary()}.`);
+      return;
+    }
+
+    onFileSelect(file);
+  }, [onFileSelect]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -30,23 +47,14 @@ export function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
 
     if (disabled) return;
 
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const file = files[0];
-      if (file.type === 'image/png') {
-        onFileSelect(file);
-      }
-    }
-  }, [disabled, onFileSelect]);
+    selectFile(e.dataTransfer.files[0]);
+  }, [disabled, selectFile]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      onFileSelect(files[0]);
-    }
-    // Reset input value to allow re-uploading same file
+    selectFile(e.target.files?.[0]);
+    // Reset the input value to allow re-uploading the same file.
     e.target.value = '';
-  }, [onFileSelect]);
+  }, [selectFile]);
 
   return (
     <div
@@ -59,12 +67,12 @@ export function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
       <input
         id="file-input"
         type="file"
-        accept="image/png"
+        accept={ACCEPT_ATTRIBUTE}
         className="hidden"
         onChange={handleFileInput}
         disabled={disabled}
       />
-      
+
       <div className="flex flex-col items-center justify-center gap-4 py-8">
         <div className="relative">
           <div className="w-20 h-20 rounded-2xl bg-surface-elevated flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
@@ -74,20 +82,24 @@ export function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
             <ImageIcon className="w-4 h-4 text-primary" />
           </div>
         </div>
-        
+
         <div className="text-center">
           <p className="text-lg font-medium text-foreground mb-1">
-            Trascina qui il tuo file PNG
+            Drag your image here
           </p>
           <p className="text-sm text-muted-foreground">
-            oppure <span className="text-primary font-medium">clicca per selezionare</span>
+            or <span className="text-primary font-medium">click to select</span>
           </p>
         </div>
-        
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="w-2 h-2 rounded-full bg-primary/50"></div>
-          <span>Solo file PNG supportati</span>
+
+        <div className="flex items-center gap-2 text-xs text-muted-foreground text-center">
+          <div className="w-2 h-2 rounded-full bg-primary/50 flex-shrink-0"></div>
+          <span>Supported: {getSupportedFormatSummary()}</span>
         </div>
+
+        <p className="text-xs text-muted-foreground/70 text-center max-w-xs">
+          JPEG XL requires a recent browser (Chrome 155+, Firefox 158+, Safari 17+).
+        </p>
       </div>
     </div>
   );

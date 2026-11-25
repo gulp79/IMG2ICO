@@ -14,16 +14,16 @@ export function SizeSelector({ selection, onChange, maxDimension, disabled }: Si
 
   const toggleSize = (size: number) => {
     if (disabled) return;
-    
+
     if (isAuto) {
-      // Switch from auto to manual with this size selected
+      // Switch from auto to manual with this size selected.
       onChange([size]);
     } else {
       const newSelection = selectedSizes.includes(size)
         ? selectedSizes.filter((s) => s !== size)
         : [...selectedSizes, size];
-      
-      // If no sizes selected, switch back to auto
+
+      // If no sizes are selected, switch back to auto.
       if (newSelection.length === 0) {
         onChange('auto');
       } else {
@@ -52,7 +52,7 @@ export function SizeSelector({ selection, onChange, maxDimension, disabled }: Si
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-foreground">Dimensioni icona</h3>
+        <h3 className="text-sm font-medium text-foreground">Icon sizes</h3>
         <button
           onClick={setAuto}
           disabled={disabled}
@@ -65,12 +65,12 @@ export function SizeSelector({ selection, onChange, maxDimension, disabled }: Si
           Auto
         </button>
       </div>
-      
+
       <div className="grid grid-cols-3 gap-2">
-        {AVAILABLE_SIZES.map(({ size, label }) => {
+        {AVAILABLE_SIZES.map(({ size, label }: IconSize) => {
           const available = isSizeAvailable(size);
           const selected = isSizeSelected(size);
-          
+
           return (
             <button
               key={size}
@@ -94,11 +94,11 @@ export function SizeSelector({ selection, onChange, maxDimension, disabled }: Si
           );
         })}
       </div>
-      
+
       <p className="text-xs text-muted-foreground">
         {isAuto
-          ? 'Verranno incluse automaticamente tutte le dimensioni fino alla risoluzione dell\'immagine.'
-          : `${selectedSizes.length} dimensione${selectedSizes.length !== 1 ? 'i' : ''} selezionata${selectedSizes.length !== 1 ? 'e' : ''}`}
+          ? 'All sizes up to the source resolution are included automatically.'
+          : `${selectedSizes.length} size${selectedSizes.length !== 1 ? 's' : ''} selected`}
       </p>
     </div>
   );

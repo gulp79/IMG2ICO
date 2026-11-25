@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPreview } from '@/utils/icoConverter';
+import { getInputFormat } from '@/utils/imageFormats';
 import { Loader2 } from 'lucide-react';
 
 interface ImagePreviewProps {
@@ -19,27 +20,28 @@ export function ImagePreview({ file, dimensions }: ImagePreviewProps) {
   }, [file]);
 
   const isSquare = dimensions.width === dimensions.height;
+  const format = getInputFormat(file);
 
   return (
     <div className="glass-card p-6 space-y-4 animate-scale-in">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-foreground">Anteprima</h3>
+        <h3 className="text-sm font-medium text-foreground">Preview</h3>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground font-mono">
-            {dimensions.width}×{dimensions.height}
+            {format?.label ? `${format.label} · ` : ''}{dimensions.width}×{dimensions.height}
           </span>
           {!isSquare && (
             <span className="px-2 py-0.5 rounded text-xs bg-warning/10 text-warning-foreground border border-warning/20">
-              Non quadrata
+              Not square
             </span>
           )}
         </div>
       </div>
-      
+
       <div className="flex items-center justify-center p-4">
         <div className="relative">
           {/* Checkerboard background for transparency */}
-          <div 
+          <div
             className="absolute inset-0 rounded-xl overflow-hidden"
             style={{
               backgroundImage: `
@@ -52,7 +54,7 @@ export function ImagePreview({ file, dimensions }: ImagePreviewProps) {
               backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
             }}
           />
-          
+
           <div className="relative w-[200px] h-[200px] rounded-xl overflow-hidden border border-border flex items-center justify-center">
             {loading ? (
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -66,7 +68,7 @@ export function ImagePreview({ file, dimensions }: ImagePreviewProps) {
           </div>
         </div>
       </div>
-      
+
       <div className="text-center">
         <p className="text-sm text-foreground font-medium truncate max-w-full">
           {file.name}
@@ -75,10 +77,10 @@ export function ImagePreview({ file, dimensions }: ImagePreviewProps) {
           {(file.size / 1024).toFixed(1)} KB
         </p>
       </div>
-      
+
       {!isSquare && (
         <p className="text-xs text-warning-foreground/80 text-center">
-          L'immagine verrà centrata con sfondo trasparente
+          The image will be centered on a transparent background.
         </p>
       )}
     </div>

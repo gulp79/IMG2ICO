@@ -1,29 +1,64 @@
-name: Build PNG2ICO-Web
+name: Build and attach release asset
 
 on:
-  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
 
 jobs:
   build:
+    name: Build and publish
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: "24"
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build project
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
         run: npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Create release archive
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          (cd dist && zip -r "../png2ico-web-${TAG}.zip" .)
+          ls -lh "png2ico-web-${TAG}.zip"
+
+      - name: Upload archive to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "${TAG}" "png2ico-web-${TAG}.zip" --clobber
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v7
         with:
-          name: png2ico-build
-          path: dist/
+          name: png2ico-web-${{ github.event.release.tag_name }}
+          path: png2ico-web-${{ github.event.release.tag_name }}.zip
+          if-no-files-found: error
+          retention-days: 14
